@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Post {
+  id            String                   @id @default(uuid()) @db.Uuid
+  title         String                   @db.VarChar(500)
+  slug          String                   @unique @db.VarChar(600)
+  content       String?                  @db.Text
+  excerpt       String?                  @db.VarChar(300)
+  featuredImage String?                  @db.Text
+  author        String                   @default("Rana") @db.VarChar(100)
+  sourceUrl     String?                  @db.Text
+  isScraped     Boolean                  @default(false)
+  publishedAt   DateTime                 @default(now()) @db.Timestamptz
+  createdAt     DateTime                 @default(now()) @db.Timestamptz
+  updatedAt     DateTime                 @updatedAt @db.Timestamptz
+  searchVector  Unsupported("tsvector")?
+
+  prompts    Prompt[]
+  images     PostImage[]
+  categories PostCategory[]
+
+  @@map("posts")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(150)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  posts PostCategory[]
+
+  @@map("categories")
+}
+
+model PostCategory {
+  postId     String @db.Uuid
+  categoryId String @db.Uuid
+
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+  @@map("post_categories")
+}
+
+model Prompt {
+  id         String   @id @default(uuid()) @db.Uuid
+  postId     String   @db.Uuid
+  promptText String   @db.Text
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("prompts")
+}
+
+model PostImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  postId     String   @db.Uuid
+  imageUrl   String   @db.Text
+  altText    String?  @db.VarChar(500)
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_images")
+}
+
+model ScrapeLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  startedAt    DateTime  @default(now()) @db.Timestamptz
+  completedAt  DateTime? @db.Timestamptz
+  status       String    @default("running") @db.VarChar(50)
+  pagesCrawled Int       @default(0)
+  postsFound   Int       @default(0)
+  postsAdded   Int       @default(0)
+  postsSkipped Int       @default(0)
+  errors       Int?      @default(0)
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+
+  @@map("scrape_logs")
+}
